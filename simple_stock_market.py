@@ -5,18 +5,22 @@ import datetime
 import pandas as pd
 
 begin_time = datetime.datetime.now()
+remove_nth_row = int
+simulation_time = int
 
 def get_input():
-    global min_price
-    global max_price
-    global current_price
     global simulation_time
-    global volatility
-    global value_scaler
+    global remove_nth_row
     
     try:
         number_of_stocks = abs(int(input("Enter a number of stocks: ")))
         simulation_time = abs(int(input("Enter a simulation time (days) (int): "))) #days
+        #plot_npercent_of_data = abs(int(input("How many percent of the data should be plotted: "))) #keep file size small
+        
+        #if plot_npercent_of_data != 100:
+        #    remove_nth_row = int((simulation_time * 24 * 60 * 0.01) / (simulation_time * 24 * 60 * 0.01 * (100 - plot_npercent_of_data)))
+        #else:
+        #    remove_nth_row = 0
     except:
         print("please enter a number")
         exit()    
@@ -31,9 +35,9 @@ def get_input():
             volatility = abs(float(input("Enter a stock volatility (0.1-0.9): "))) #determines width of min max range
             value_scaler = abs(float(input("Enter a stock value scaler: "))) #determines cheapness of stock
             stock_name = input("Enter a stock name: ") #determines cheapness of stock
-            
-            stock_df = pd.DataFrame(columns=['time','current_price'])
                 
+            stock_df = pd.DataFrame(columns=['time','current_price'])
+            
             stockdict =	{
                 "last_change": last_change,
                 "min_price": min_price,
@@ -178,10 +182,11 @@ for q in range(simulation_time):
             for j in range(60):
                 update_current_price_result = (update_current_price(current_price, max_price, min_price, price_target, last_change))
                 current_price = update_current_price_result[0]
+                
                 scaled_current_price = scale_value(current_price, value_scaler)
                 last_change = update_current_price_result[1]
                 
-                new_row = {'time':time, 'current_price':current_price}
+                new_row = {'time':time, 'current_price':scaled_current_price}
                 stock_df = stock_df.append(new_row, ignore_index=True)
                 
                 time = time + 1
@@ -203,7 +208,10 @@ for stock_index, stock in enumerate(stock_list):
     stock_df = stock.get("stock_df")
     stock_name = stock.get("stock_name")
     
-    plot = sns.scatterplot(data=stock_df, x="time", y="current_price").get_figure()
-    plot.savefig(stock_name+".svg", format='svg', dpi=1200)
+    #if remove_nth_row != 0:
+    #stock_df = stock_df.iloc[::remove_nth_row, :]
+    
+    plot = sns.lineplot(data=stock_df, x="time", y="current_price").get_figure()
+    plot.savefig(stock_name+".png", format='png', dpi=1250)
       
 print("Runtime: " + str(datetime.datetime.now() - begin_time))
