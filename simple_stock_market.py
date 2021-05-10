@@ -1,4 +1,5 @@
 import seaborn as sns
+import matplotlib.pyplot as plt
 import math 
 import random
 import datetime
@@ -159,59 +160,65 @@ def scale_value(value, value_scaler):
     new_value = value / value_scaler
     return new_value
 
+def plot_stock_value(stock_list):
+    for stock_index, stock in enumerate(stock_list):
+        stock_df = stock.get("stock_df")
+        stock_name = stock.get("stock_name")
+        
+        #if remove_nth_row != 0:
+        #stock_df = stock_df.iloc[::remove_nth_row, :]
+        
+        plot = sns.lineplot(data=stock_df, x="time", y="current_price").get_figure()
+        plot.savefig(stock_name+".png", format='png', dpi=1250)
+        plt.close() 
+
 stock_list = get_input()
 
-for q in range(simulation_time):
-    print("time: " + str(q))
-    for stock_index, stock in enumerate(stock_list):  
-          
-        min_price = stock.get('min_price')
-        max_price = stock.get('max_price')
-        current_price = stock.get('current_price')
-        volatility = stock.get('volatility')
-        value_scaler = stock.get('value_scaler')
-        last_change = stock.get('last_change')
-        stock_df = stock.get("stock_df")
-    
-        function = define_function(current_price, max_price, min_price)
-        time = q * 60 * 24
+def run():
+    for q in range(simulation_time):
+        print("time: " + str(q))
+        for stock_index, stock in enumerate(stock_list):  
+              
+            min_price = stock.get('min_price')
+            max_price = stock.get('max_price')
+            current_price = stock.get('current_price')
+            volatility = stock.get('volatility')
+            value_scaler = stock.get('value_scaler')
+            last_change = stock.get('last_change')
+            stock_df = stock.get("stock_df")
         
-        for i in range(24):
-            price_target = get_price_target(function, i, max_price, min_price,)
+            function = define_function(current_price, max_price, min_price)
+            time = q * 60 * 24
             
-            for j in range(60):
-                update_current_price_result = (update_current_price(current_price, max_price, min_price, price_target, last_change))
-                current_price = update_current_price_result[0]
+            for i in range(24):
+                price_target = get_price_target(function, i, max_price, min_price,)
                 
-                scaled_current_price = scale_value(current_price, value_scaler)
-                last_change = update_current_price_result[1]
+                for j in range(60):
+                    update_current_price_result = (update_current_price(current_price, max_price, min_price, price_target, last_change))
+                    current_price = update_current_price_result[0]
+                    
+                    scaled_current_price = scale_value(current_price, value_scaler)
+                    last_change = update_current_price_result[1]
+                    
+                    new_row = {'time':time, 'current_price':scaled_current_price}
+                    stock_df = stock_df.append(new_row, ignore_index=True)
+                    
+                    time = time + 1
+                    
+                new_min_max_prize = update_min_max(max_price, min_price, volatility)
+                max_price = new_min_max_prize[0]
+                min_price = new_min_max_prize[1]
                 
-                new_row = {'time':time, 'current_price':scaled_current_price}
-                stock_df = stock_df.append(new_row, ignore_index=True)
-                
-                time = time + 1
-                
-            new_min_max_prize = update_min_max(max_price, min_price, volatility)
-            max_price = new_min_max_prize[0]
-            min_price = new_min_max_prize[1]
+            stock['min_price'] = min_price
+            stock['max_price'] = max_price
+            stock['current_price'] = current_price
+            stock['stock_index'] = stock
+            stock['last_change'] = last_change
+            stock['stock_df'] = stock_df
             
-        stock['min_price'] = min_price
-        stock['max_price'] = max_price
-        stock['current_price'] = current_price
-        stock['stock_index'] = stock
-        stock['last_change'] = last_change
-        stock['stock_df'] = stock_df
-        
-        stock_list[stock_index] = stock
-            
-for stock_index, stock in enumerate(stock_list):
-    stock_df = stock.get("stock_df")
-    stock_name = stock.get("stock_name")
+            stock_list[stock_index] = stock
     
-    #if remove_nth_row != 0:
-    #stock_df = stock_df.iloc[::remove_nth_row, :]
+    plot_stock_value(stock_list)                  
+    print("Runtime: " + str(datetime.datetime.now() - begin_time))
     
-    plot = sns.lineplot(data=stock_df, x="time", y="current_price").get_figure()
-    plot.savefig(stock_name+".png", format='png', dpi=1250)
-      
-print("Runtime: " + str(datetime.datetime.now() - begin_time))
+run()
