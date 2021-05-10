@@ -4,74 +4,92 @@ import math
 import random
 import datetime
 import pandas as pd
+import sys
+import json
 
 begin_time = datetime.datetime.now()
 simulation_time = int
 global_sentiment = random.choice(["bullish", "bearish"])
 global_market = False
 global_market_strength = 100
+simulation_time = 1
 
 def get_input():
     global simulation_time
     global global_market
     global global_market_strength
     
-    try:
-        number_of_stocks = abs(int(input("Enter a number of stocks: ")))
-        simulation_time = abs(int(input("Enter a simulation time (days) (int): "))) #days
-        global_market = input("Global market (y/n): ") #days
-        if global_market == "y":
-            global_market = True
-            global_market_strength = abs(int(input("Enter global market strenght (lower is stronger) (default: 100) (int): ")))
-            if global_market_strength == 0:
-                global_market_strength = 1
-        else:
-            global_market = False
-        
-
-    except:
-        print("please enter a number")
-        exit()    
-    
     stock_list = []
-    for z in range(number_of_stocks): 
+    
+    if len(sys.argv) > 1:
+        input_json_file = sys.argv[1]
+        
         try:
-            last_change = random.choice(["positive", "negative"])
-            min_price = abs(float(input("Enter a min stock price: ")))
-            if min_price == 0:
-                min_price = 1
-            max_price = abs(float(input("Enter a max stock price: ")))
-            if max_price == 0:
-                max_price = 1
-            current_price = abs(float(input("Enter a current stock price: ")))
-            if current_price == 0:
-                current_price = 1
-            volatility = abs(float(input("Enter a stock volatility (0.1-0.9): "))) #determines width of min max range
-            if volatility == 0:
-                volatility = 0.1
-            value_scaler = abs(float(input("Enter a stock value scaler: "))) #determines cheapness of stock
-            if value_scaler == 0:
-                value_scaler = 1
-            stock_name = input("Enter a stock name: ") #determines cheapness of stock
-                
-            stock_df = pd.DataFrame(columns=['time','current_price'])
+            with open(input_json_file) as f:
+                for jsonObj in f:
+                    stockdict = json.loads(jsonObj)
+                    stock_df = pd.DataFrame(columns=['time','current_price'])
+                    stockdict['stock_df'] = stock_df
+                    stock_list.append(stockdict)
+        except:
+            print("Error in file")
+            exit()  
+    else:
+        try:
+            number_of_stocks = abs(int(input("Enter a number of stocks: ")))
+            simulation_time = abs(int(input("Enter a simulation time (days) (int): "))) #days
+            global_market = input("Global market (y/n): ") #days
+            if global_market == "y":
+                global_market = True
+                global_market_strength = abs(int(input("Enter global market strenght (lower is stronger) (default: 100) (int): ")))
+                if global_market_strength == 0:
+                    global_market_strength = 1
+            else:
+                global_market = False
             
-            stockdict =	{
-                "last_change": last_change,
-                "min_price": min_price,
-                "max_price": max_price,
-                "current_price": current_price,
-                "volatility": volatility,
-                "value_scaler": value_scaler,
-                "stock_df": stock_df,
-                "stock_name": stock_name
-            }
-            
-            stock_list.append(stockdict)
-            
+    
         except:
             print("please enter a number")
-            exit()   
+            exit()    
+    
+        for z in range(number_of_stocks): 
+            try:
+                last_change = random.choice(["positive", "negative"])
+                min_price = abs(float(input("Enter a min stock price: ")))
+                if min_price == 0:
+                    min_price = 1
+                max_price = abs(float(input("Enter a max stock price: ")))
+                if max_price == 0:
+                    max_price = 1
+                current_price = abs(float(input("Enter a current stock price: ")))
+                if current_price == 0:
+                    current_price = 1
+                volatility = abs(float(input("Enter a stock volatility (0.1-0.9): "))) #determines width of min max range
+                if volatility == 0:
+                    volatility = 0.1
+                value_scaler = abs(float(input("Enter a stock value scaler: "))) #determines cheapness of stock
+                if value_scaler == 0:
+                    value_scaler = 1
+                stock_name = input("Enter a stock name: ") #determines cheapness of stock
+                    
+                stock_df = pd.DataFrame(columns=['time','current_price'])
+                
+                stockdict =	{
+                    "last_change": last_change,
+                    "min_price": min_price,
+                    "max_price": max_price,
+                    "current_price": current_price,
+                    "volatility": volatility,
+                    "value_scaler": value_scaler,
+                    "stock_df": stock_df,
+                    "stock_name": stock_name
+                }
+                
+                stock_list.append(stockdict)
+            
+            except:
+                print("please enter a number")
+                exit()   
             
     return(stock_list)
 
