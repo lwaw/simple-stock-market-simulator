@@ -6,22 +6,29 @@ import datetime
 import pandas as pd
 
 begin_time = datetime.datetime.now()
-#remove_nth_row = int
 simulation_time = int
+global_sentiment = random.choice(["bullish", "bearish"])
+global_market = False
+global_market_strength = 100
 
 def get_input():
     global simulation_time
-    #global remove_nth_row
+    global global_market
+    global global_market_strength
     
     try:
         number_of_stocks = abs(int(input("Enter a number of stocks: ")))
         simulation_time = abs(int(input("Enter a simulation time (days) (int): "))) #days
-        #plot_npercent_of_data = abs(int(input("How many percent of the data should be plotted: "))) #keep file size small
+        global_market = input("Global market (y/n): ") #days
+        if global_market == "y":
+            global_market = True
+            global_market_strength = abs(int(input("Enter global market strenght (lower is stronger) (default: 100) (int): ")))
+            if global_market_strength == 0:
+                global_market_strength = 1
+        else:
+            global_market = False
         
-        #if plot_npercent_of_data != 100:
-        #    remove_nth_row = int((simulation_time * 24 * 60 * 0.01) / (simulation_time * 24 * 60 * 0.01 * (100 - plot_npercent_of_data)))
-        #else:
-        #    remove_nth_row = 0
+
     except:
         print("please enter a number")
         exit()    
@@ -31,10 +38,20 @@ def get_input():
         try:
             last_change = random.choice(["positive", "negative"])
             min_price = abs(float(input("Enter a min stock price: ")))
+            if min_price == 0:
+                min_price = 1
             max_price = abs(float(input("Enter a max stock price: ")))
+            if max_price == 0:
+                max_price = 1
             current_price = abs(float(input("Enter a current stock price: ")))
+            if current_price == 0:
+                current_price = 1
             volatility = abs(float(input("Enter a stock volatility (0.1-0.9): "))) #determines width of min max range
+            if volatility == 0:
+                volatility = 0.1
             value_scaler = abs(float(input("Enter a stock value scaler: "))) #determines cheapness of stock
+            if value_scaler == 0:
+                value_scaler = 1
             stock_name = input("Enter a stock name: ") #determines cheapness of stock
                 
             stock_df = pd.DataFrame(columns=['time','current_price'])
@@ -122,6 +139,10 @@ def update_current_price(current_price, max_price, min_price, price_target, last
     return [new_price, last_change]
 
 def update_min_max(max_price, min_price, volatility):
+    global global_market
+    global global_sentiment
+    global global_market_strength
+    
     prefered_diff = math.pow(-3.300066 + 3.44987 * math.e, 3.660217 * volatility)
     diff = max_price - min_price
     rand_change_max_value = random.random()
@@ -149,6 +170,22 @@ def update_min_max(max_price, min_price, volatility):
         new_min_price = min_price
         new_max_price = max_price
         
+    if global_market == True:
+        rand_global_sentiment_value = random.random()
+        if rand_global_sentiment_value < 0.01:
+            if global_sentiment == "bullish":
+                global_sentiment = "bearish"
+            else:
+                global_sentiment = "bullish"
+                
+        if global_sentiment == "bullish":
+            rand_global_market_value = random.random() / global_market_strength
+        elif global_sentiment == "bearish":
+            rand_global_market_value = -1 * random.random() / global_market_strength
+            
+        if new_max_price + rand_global_market_value > new_min_price:
+            new_max_price = new_max_price + rand_global_market_value
+        
     if new_min_price <= 0:
         new_min_price = min_price
     if new_max_price <= 0:
@@ -164,9 +201,6 @@ def plot_stock_value(stock_list):
     for stock_index, stock in enumerate(stock_list):
         stock_df = stock.get("stock_df")
         stock_name = stock.get("stock_name")
-        
-        #if remove_nth_row != 0:
-        #stock_df = stock_df.iloc[::remove_nth_row, :]
         
         plot = sns.lineplot(data=stock_df, x="time", y="current_price").get_figure()
         plot.savefig(stock_name+".png", format='png', dpi=1250)
