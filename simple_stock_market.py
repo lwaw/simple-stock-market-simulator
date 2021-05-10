@@ -5,12 +5,12 @@ import datetime
 import pandas as pd
 
 begin_time = datetime.datetime.now()
-remove_nth_row = int
+#remove_nth_row = int
 simulation_time = int
 
 def get_input():
     global simulation_time
-    global remove_nth_row
+    #global remove_nth_row
     
     try:
         number_of_stocks = abs(int(input("Enter a number of stocks: ")))
@@ -55,7 +55,7 @@ def get_input():
             print("please enter a number")
             exit()   
             
-        return(stock_list)
+    return(stock_list)
 
 def define_function(current_price, max_price, min_price):
     use_current_price = current_price
@@ -148,9 +148,9 @@ def update_min_max(max_price, min_price, volatility):
         new_min_price = min_price
         new_max_price = max_price
         
-    if new_min_price < 0:
+    if new_min_price <= 0:
         new_min_price = min_price
-    if new_max_price < 0:
+    if new_max_price <= 0:
         new_min_price = max_price
     
     return [new_max_price, new_min_price]
