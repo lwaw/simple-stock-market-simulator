@@ -2,7 +2,7 @@ This tool is able to simulate stocks using sine and cosine functions. Parameters
 
 The ptyhon script accepts a json file as argument, else it will ask for parameters. If save is true then an json file will be saved.
 
-arguments when using a json input: simple-stock_market.py json.txt simulation_time(int) save(0,1) save_fig(0,1)
+arguments when using a json input: simple-stock_market.py json.txt simulation_time(int) save(0,1) save_fig(0,1), save_mode(0,1) global_market(0,1) global_market_strength(int)
 
 <p align="center">
   <img src="penny.png" width="350" title="hover text">

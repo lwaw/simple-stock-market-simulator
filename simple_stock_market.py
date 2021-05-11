@@ -10,8 +10,8 @@ begin_time = datetime.datetime.now()
 simulation_time = int
 global_sentiment = random.choice(["bullish", "bearish"])
 global_market = False
-global_market_strength = 1000
-average_change_global_sentiment = 1 / (100 * 24) #1 / (days * 24) changes every * days
+global_market_strength = 5 #smaller global_market_strength is stronger effect
+average_change_global_sentiment = float #1 / (days * 24 * number_of_stocks) changes every * days
 simulation_time = 1
 save = False
 save_fig = False
@@ -25,6 +25,7 @@ def get_input():
     global save_fig
     global simulation_time
     global save_mode
+    global average_change_global_sentiment
     
     stock_list = []
     
@@ -43,17 +44,17 @@ def get_input():
             
         try:
             simulation_time = abs(int(sys.argv[2]))
-            save_input = sys.argv[3]
-            if save_input == "1":
+            save_input = int(sys.argv[3])
+            if save_input == 1:
                 save = True
-            save_fig_input = sys.argv[4]
-            if save_fig_input == "1":
+            save_fig_input = int(sys.argv[4])
+            if save_fig_input == 1:
                 save_fig = True
-            save_mode_input = sys.argv[5]
-            if save_mode_input == "1":
+            save_mode_input = int(sys.argv[5])
+            if save_mode_input == 1:
                 save_mode = 1
             global_market_input = abs(int(sys.argv[6]))
-            if global_market_input == "1":
+            if global_market_input == 1:
                 global_market = True
             global_market_strength = abs(int(sys.argv[7]))
                 
@@ -67,18 +68,18 @@ def get_input():
             global_market = input("Global market (y/n): ") #days
             if global_market == "y":
                 global_market = True
-                global_market_strength = abs(int(input("Enter global market strenght (lower is stronger) (default: 1000) (int): ")))
+                global_market_strength = abs(int(input("Enter global market strenght (lower is stronger) (default: 5) (int): ")))
                 if global_market_strength == 0:
                     global_market_strength = 1
             else:
                 global_market = False
-            save_input = input("Save (y/n): ") #days
+            save_input = input("Create output (y/n): ") #days
             if save_input == "y":
                 save = True
             save_fig_input = input("Save figure (y/n): ") #days
             if save_fig_input == "y":
                 save_fig = True
-            save_mode_input = input("Save mode (0,1): ") #days
+            save_mode_input = input("Store only last value (0,1): ") #days
             if save_mode_input == "1":
                 save_mode = 1
             
@@ -128,7 +129,8 @@ def get_input():
             except:
                 print("please enter a number")
                 exit()   
-            
+    
+    average_change_global_sentiment = 1 / (100 * 24 * len(stock_list))
     return(stock_list)
 
 def define_function(current_price, max_price, min_price):
@@ -155,7 +157,12 @@ def define_function(current_price, max_price, min_price):
 
     return function
 
-def get_price_target(function, time_step, max_price, min_price,):
+def get_price_target(function, time_step, max_price, min_price):
+    global global_market
+    global global_sentiment
+    global global_market_strength
+    global average_change_global_sentiment
+
     if function.get('function_type') == "sin":
         price_target = function.get('amplitude') * math.sin(function.get('periodicity') * time_step) + function.get('vertical_translation')
     elif function.get('function_type') == "cos":
@@ -174,6 +181,19 @@ def get_price_target(function, time_step, max_price, min_price,):
     elif price_target > max_price:
         price_target = max_price
         
+    if global_market == True:
+        rand_global_sentiment_value = random.random()
+        if rand_global_sentiment_value < average_change_global_sentiment:
+            global_sentiment = random.choice(["bullish", "bearish"])
+                
+        if global_sentiment == "bullish":
+            rand_global_market_value = random.random() / (global_market_strength / price_target)
+            price_target = price_target + rand_global_market_value
+        elif global_sentiment == "bearish":
+            rand_global_market_value = -1 * random.random() / (global_market_strength / price_target)
+            if price_target + rand_global_market_value > 0:
+                price_target = price_target + rand_global_market_value
+                
     return price_target
 
 def update_current_price(current_price, max_price, min_price, price_target, last_change):  
@@ -194,12 +214,7 @@ def update_current_price(current_price, max_price, min_price, price_target, last
 
     return [new_price, last_change]
 
-def update_min_max(max_price, min_price, volatility):
-    global global_market
-    global global_sentiment
-    global global_market_strength
-    global average_change_global_sentiment
-    
+def update_min_max(max_price, min_price, volatility):    
     prefered_diff = math.pow(-3.300066 + 3.44987 * math.e, 3.660217 * volatility)
     diff = max_price - min_price
     rand_change_max_value = random.random()
@@ -226,23 +241,7 @@ def update_min_max(max_price, min_price, volatility):
     if new_min_price > new_max_price:
         new_min_price = min_price
         new_max_price = max_price
-        
-    if global_market == True:
-        rand_global_sentiment_value = random.random()
-        if rand_global_sentiment_value < average_change_global_sentiment:
-            if global_sentiment == "bullish":
-                global_sentiment = "bearish"
-            else:
-                global_sentiment = "bullish"
-                
-        if global_sentiment == "bullish":
-            rand_global_market_value = random.random() / global_market_strength
-        elif global_sentiment == "bearish":
-            rand_global_market_value = -1 * random.random() / global_market_strength
-            
-        if new_max_price + rand_global_market_value > new_min_price:
-            new_max_price = new_max_price + rand_global_market_value
-        
+                        
     if new_min_price <= 0:
         new_min_price = min_price
     if new_max_price <= 0:
@@ -262,8 +261,6 @@ def plot_stock_value(stock_list):
         plot = sns.lineplot(x=stock_dict['time'], y=stock_dict['current_price']).get_figure()
         plot.savefig(stock_name+".png", format='png', dpi=1250)
         plt.close() 
-
-stock_list = get_input()
 
 def check_save(stock_dict):
     global simulation_time
@@ -292,6 +289,8 @@ def run():
     global save_fig
     global simulation_time
     global save_mode
+    
+    stock_list = get_input()
     
     start_time = check_save(stock_list[0])
     
