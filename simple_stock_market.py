@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 import math 
 import random
 import datetime
-import pandas as pd
 import sys
 import json
 
@@ -13,11 +12,14 @@ global_sentiment = random.choice(["bullish", "bearish"])
 global_market = False
 global_market_strength = 100
 simulation_time = 1
+save = False
 
 def get_input():
     global simulation_time
     global global_market
     global global_market_strength
+    global save
+    global simulation_time
     
     stock_list = []
     
@@ -28,12 +30,21 @@ def get_input():
             with open(input_json_file) as f:
                 for jsonObj in f:
                     stockdict = json.loads(jsonObj)
-                    stock_df = pd.DataFrame(columns=['time','current_price'])
-                    stockdict['stock_df'] = stock_df
                     stock_list.append(stockdict)
         except:
             print("Error in file")
             exit()  
+            
+        try:
+            simulation_time = abs(int(sys.argv[2]))
+        except:
+            pass
+        try:
+            save_input = sys.argv[3]
+            if save_input == "1":
+                save = True
+        except:
+            pass
     else:
         try:
             number_of_stocks = abs(int(input("Enter a number of stocks: ")))
@@ -71,8 +82,12 @@ def get_input():
                 if value_scaler == 0:
                     value_scaler = 1
                 stock_name = input("Enter a stock name: ") #determines cheapness of stock
-                    
-                stock_df = pd.DataFrame(columns=['time','current_price'])
+                
+                stock_dict = {
+                    "time": [],
+                    "current_price": []
+                    #pd.DataFrame(columns=['time','current_price'])
+                }
                 
                 stockdict =	{
                     "last_change": last_change,
@@ -81,7 +96,7 @@ def get_input():
                     "current_price": current_price,
                     "volatility": volatility,
                     "value_scaler": value_scaler,
-                    "stock_df": stock_df,
+                    "stock_dict": stock_dict,
                     "stock_name": stock_name
                 }
                 
@@ -217,17 +232,44 @@ def scale_value(value, value_scaler):
 
 def plot_stock_value(stock_list):
     for stock_index, stock in enumerate(stock_list):
-        stock_df = stock.get("stock_df")
+        stock_dict = stock.get("stock_dict")
         stock_name = stock.get("stock_name")
         
-        plot = sns.lineplot(data=stock_df, x="time", y="current_price").get_figure()
+        plot = sns.lineplot(x=stock_dict['time'], y=stock_dict['current_price']).get_figure()
         plot.savefig(stock_name+".png", format='png', dpi=1250)
         plt.close() 
 
 stock_list = get_input()
 
+def check_save(stock_dict):
+    global simulation_time
+    time_list = stock_dict['stock_dict']['time']
+    if not time_list:
+        return 0
+    else:
+        start_time = int(round(len(time_list) / 60 / 24))
+        simulation_time = simulation_time + start_time
+        return start_time
+    
+def save_json(stock_list):
+    f = open("output.txt", "w+")
+    f.close()
+    
+    for stock_dict in stock_list:
+        json_object = json.dumps(stock_dict) 
+        
+        f = open("output.txt", "a")
+        f.write(json_object)
+        f.write("\n")
+        f.close()
+
 def run():
-    for q in range(simulation_time):
+    global save
+    global simulation_time
+    
+    start_time = check_save(stock_list[0])
+    
+    for q in range(start_time, simulation_time):
         print("time: " + str(q))
         for stock_index, stock in enumerate(stock_list):  
               
@@ -237,7 +279,7 @@ def run():
             volatility = stock.get('volatility')
             value_scaler = stock.get('value_scaler')
             last_change = stock.get('last_change')
-            stock_df = stock.get("stock_df")
+            stock_dict = stock.get("stock_dict")
         
             function = define_function(current_price, max_price, min_price)
             time = q * 60 * 24
@@ -252,8 +294,13 @@ def run():
                     scaled_current_price = scale_value(current_price, value_scaler)
                     last_change = update_current_price_result[1]
                     
-                    new_row = {'time':time, 'current_price':scaled_current_price}
-                    stock_df = stock_df.append(new_row, ignore_index=True)
+                    time_list = stock_dict['time']
+                    time_list.append(time)
+                    current_price_list = stock_dict['current_price']
+                    current_price_list.append(scaled_current_price)
+                    
+                    stock_dict['time'] = time_list
+                    stock_dict['current_price'] = current_price_list
                     
                     time = time + 1
                     
@@ -264,13 +311,16 @@ def run():
             stock['min_price'] = min_price
             stock['max_price'] = max_price
             stock['current_price'] = current_price
-            stock['stock_index'] = stock
             stock['last_change'] = last_change
-            stock['stock_df'] = stock_df
+            stock['stock_dict'] = stock_dict
             
             stock_list[stock_index] = stock
     
-    plot_stock_value(stock_list)                  
+    plot_stock_value(stock_list)    
+
+    if save == True:
+        save_json(stock_list)  
+         
     print("Runtime: " + str(datetime.datetime.now() - begin_time))
     
 run()

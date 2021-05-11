@@ -1,2 +1,2 @@
-{"last_change": "positive", "min_price": 1, "max_price": 5, "current_price": 2, "volatility": 0.9, "value_scaler": 100, "stock_name": "penny"}
-{"last_change": "positive", "min_price": 100, "max_price": 110, "current_price": 105, "volatility": 0.1, "value_scaler": 1, "stock_name": "big_tech"}
+{"last_change": "positive", "min_price": 1, "max_price": 5, "current_price": 2, "volatility": 0.9, "value_scaler": 100, "stock_dict": {"time": [], "current_price": []}, "stock_name": "penny"}
+{"last_change": "positive", "min_price": 100, "max_price": 110, "current_price": 105, "volatility": 0.1, "value_scaler": 1, "stock_dict": {"time": [], "current_price": []}, "stock_name": "big_tech"}
