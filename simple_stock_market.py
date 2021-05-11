@@ -10,19 +10,25 @@ begin_time = datetime.datetime.now()
 simulation_time = int
 global_sentiment = random.choice(["bullish", "bearish"])
 global_market = False
-global_market_strength = 100
+global_market_strength = 1000
+average_change_global_sentiment = 1 / (100 * 24) #1 / (days * 24) changes every * days
 simulation_time = 1
 save = False
+save_fig = False
+save_mode = 0 #0: save all data points, 1: save only last data point
 
 def get_input():
     global simulation_time
     global global_market
     global global_market_strength
     global save
+    global save_fig
     global simulation_time
+    global save_mode
     
     stock_list = []
     
+    #simple-stock_market.py json.txt simulation_time(int) save(0,1) save_fig(0,1), save_mode(0,1) global_market(0,1) global_market_strength(int)
     if len(sys.argv) > 1:
         input_json_file = sys.argv[1]
         
@@ -37,14 +43,23 @@ def get_input():
             
         try:
             simulation_time = abs(int(sys.argv[2]))
-        except:
-            pass
-        try:
             save_input = sys.argv[3]
             if save_input == "1":
                 save = True
+            save_fig_input = sys.argv[4]
+            if save_fig_input == "1":
+                save_fig = True
+            save_mode_input = sys.argv[5]
+            if save_mode_input == "1":
+                save_mode = 1
+            global_market_input = abs(int(sys.argv[6]))
+            if global_market_input == "1":
+                global_market = True
+            global_market_strength = abs(int(sys.argv[7]))
+                
         except:
             pass
+        
     else:
         try:
             number_of_stocks = abs(int(input("Enter a number of stocks: ")))
@@ -52,11 +67,20 @@ def get_input():
             global_market = input("Global market (y/n): ") #days
             if global_market == "y":
                 global_market = True
-                global_market_strength = abs(int(input("Enter global market strenght (lower is stronger) (default: 100) (int): ")))
+                global_market_strength = abs(int(input("Enter global market strenght (lower is stronger) (default: 1000) (int): ")))
                 if global_market_strength == 0:
                     global_market_strength = 1
             else:
                 global_market = False
+            save_input = input("Save (y/n): ") #days
+            if save_input == "y":
+                save = True
+            save_fig_input = input("Save figure (y/n): ") #days
+            if save_fig_input == "y":
+                save_fig = True
+            save_mode_input = input("Save mode (0,1): ") #days
+            if save_mode_input == "1":
+                save_mode = 1
             
     
         except:
@@ -86,7 +110,6 @@ def get_input():
                 stock_dict = {
                     "time": [],
                     "current_price": []
-                    #pd.DataFrame(columns=['time','current_price'])
                 }
                 
                 stockdict =	{
@@ -175,6 +198,7 @@ def update_min_max(max_price, min_price, volatility):
     global global_market
     global global_sentiment
     global global_market_strength
+    global average_change_global_sentiment
     
     prefered_diff = math.pow(-3.300066 + 3.44987 * math.e, 3.660217 * volatility)
     diff = max_price - min_price
@@ -205,7 +229,7 @@ def update_min_max(max_price, min_price, volatility):
         
     if global_market == True:
         rand_global_sentiment_value = random.random()
-        if rand_global_sentiment_value < 0.01:
+        if rand_global_sentiment_value < average_change_global_sentiment:
             if global_sentiment == "bullish":
                 global_sentiment = "bearish"
             else:
@@ -265,7 +289,9 @@ def save_json(stock_list):
 
 def run():
     global save
+    global save_fig
     global simulation_time
+    global save_mode
     
     start_time = check_save(stock_list[0])
     
@@ -295,10 +321,15 @@ def run():
                     last_change = update_current_price_result[1]
                     
                     time_list = stock_dict['time']
-                    time_list.append(time)
                     current_price_list = stock_dict['current_price']
-                    current_price_list.append(scaled_current_price)
                     
+                    if save_mode == 1:
+                        time_list = []
+                        current_price_list = []
+
+                    time_list.append(time)
+                    current_price_list.append(scaled_current_price)
+
                     stock_dict['time'] = time_list
                     stock_dict['current_price'] = current_price_list
                     
@@ -316,7 +347,8 @@ def run():
             
             stock_list[stock_index] = stock
     
-    plot_stock_value(stock_list)    
+    if save_fig == True:
+        plot_stock_value(stock_list)    
 
     if save == True:
         save_json(stock_list)  
