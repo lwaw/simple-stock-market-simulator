@@ -319,7 +319,7 @@ def minutes():
         
         stock_list[stock_index] = stock
         
-        print(current_price)
+        print(scaled_current_price)
         
     if save_fig == True:
         plot_stock_value(stock_list)    
