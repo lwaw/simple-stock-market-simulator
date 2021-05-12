@@ -10,7 +10,7 @@ begin_time = datetime.datetime.now()
 simulation_time = int
 global_sentiment = random.choice(["bullish", "bearish"])
 global_market = False
-global_market_strength = 4 #smaller global_market_strength is stronger effect
+global_market_strength = 100 #smaller global_market_strength is stronger effect
 average_change_global_sentiment = float #1 / (days * 24 * number_of_stocks) changes every * days
 simulation_time = 1
 save = False
@@ -68,7 +68,7 @@ def get_input():
             global_market = input("Global market (y/n): ") #days
             if global_market == "y":
                 global_market = True
-                global_market_strength = abs(float(input("Enter global market strenght (lower is stronger) (default: 4) (float): ")))
+                global_market_strength = abs(float(input("Enter global market strenght (lower is stronger) (default: 100) (float): ")))
                 if global_market_strength == 0:
                     global_market_strength = 1
             else:
@@ -208,14 +208,20 @@ def update_current_price(current_price, max_price, min_price, price_target, last
             last_change = "negative"
             
     if last_change == "negative":
-        new_price = new_price - rand_pos_value
+        if new_price - rand_pos_value < 0.001:
+            rand_pos_change_2 = random.random() / 100
+            while new_price - ( rand_pos_change - rand_pos_change_2 ) < 0.001:
+                rand_pos_change_2 = random.random()
+            new_price = new_price - ( rand_pos_change - rand_pos_change_2 )
+        else:
+            new_price = new_price - rand_pos_value
     elif last_change == "positive":
         new_price = new_price + rand_pos_value
 
     return [new_price, last_change]
 
 def update_min_max(max_price, min_price, volatility):    
-    prefered_diff = math.pow(-3.300066 + 3.44987 * math.e, 3.660217 * volatility)
+    prefered_diff = -3.300066 + 3.44987 * math.pow(math.e, 3.660217 * volatility)
     diff = max_price - min_price
     rand_change_max_value = random.random()
     rand_change_min_value = random.random()

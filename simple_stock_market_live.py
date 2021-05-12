@@ -139,14 +139,20 @@ def update_current_price(current_price, max_price, min_price, price_target, last
             last_change = "negative"
             
     if last_change == "negative":
-        new_price = new_price - rand_pos_value
+        if new_price - rand_pos_value < 0.001:
+            rand_pos_change_2 = random.random() / 100
+            while new_price - ( rand_pos_change - rand_pos_change_2 ) < 0.001:
+                rand_pos_change_2 = random.random()
+            new_price = new_price - ( rand_pos_change - rand_pos_change_2 )
+        else:
+            new_price = new_price - rand_pos_value
     elif last_change == "positive":
         new_price = new_price + rand_pos_value
 
     return [new_price, last_change]
 
 def update_min_max(max_price, min_price, volatility):    
-    prefered_diff = math.pow(-3.300066 + 3.44987 * math.e, 3.660217 * volatility)
+    prefered_diff = -3.300066 + 3.44987 * math.pow(math.e, 3.660217 * volatility)
     diff = max_price - min_price
     rand_change_max_value = random.random()
     rand_change_min_value = random.random()
