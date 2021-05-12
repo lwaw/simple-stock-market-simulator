@@ -2,34 +2,32 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import math 
 import random
-import datetime
 import sys
 import json
+import threading
 
-begin_time = datetime.datetime.now()
-simulation_time = int
 global_sentiment = random.choice(["bullish", "bearish"])
 global_market = False
 global_market_strength = 4 #smaller global_market_strength is stronger effect
 average_change_global_sentiment = float #1 / (days * 24 * number_of_stocks) changes every * days
-simulation_time = 1
 save = False
 save_fig = False
 save_mode = 0 #0: save all data points, 1: save only last data point
 
+hour = 0
+minute = 0
+
 def get_input():
-    global simulation_time
     global global_market
     global global_market_strength
     global save
     global save_fig
-    global simulation_time
     global save_mode
     global average_change_global_sentiment
     
     stock_list = []
     
-    #simple-stock_market.py json.txt simulation_time(int) save(0,1) save_fig(0,1), save_mode(0,1) global_market(0,1) global_market_strength(float)
+    #simple-stock_market.py json.txt save(0,1) save_fig(0,1), save_mode(0,1) global_market(0,1) global_market_strength(float)
     if len(sys.argv) > 1:
         input_json_file = sys.argv[1]
         
@@ -43,93 +41,26 @@ def get_input():
             exit()  
             
         try:
-            simulation_time = abs(int(sys.argv[2]))
-            save_input = int(sys.argv[3])
+            save_input = int(sys.argv[2])
             if save_input == 1:
                 save = True
-            save_fig_input = int(sys.argv[4])
+            save_fig_input = int(sys.argv[3])
             if save_fig_input == 1:
                 save_fig = True
-            save_mode_input = int(sys.argv[5])
+            save_mode_input = int(sys.argv[4])
             if save_mode_input == 1:
                 save_mode = 1
-            global_market_input = abs(int(sys.argv[6]))
+            global_market_input = abs(int(sys.argv[5]))
             if global_market_input == 1:
                 global_market = True
-            global_market_strength = abs(float(sys.argv[7]))
+            global_market_strength = abs(float(sys.argv[6]))
                 
         except:
             pass
-        
     else:
-        try:
-            number_of_stocks = abs(int(input("Enter a number of stocks: ")))
-            simulation_time = abs(int(input("Enter a simulation time (days) (int): "))) #days
-            global_market = input("Global market (y/n): ") #days
-            if global_market == "y":
-                global_market = True
-                global_market_strength = abs(float(input("Enter global market strenght (lower is stronger) (default: 4) (float): ")))
-                if global_market_strength == 0:
-                    global_market_strength = 1
-            else:
-                global_market = False
-            save_input = input("Create output (y/n): ") #days
-            if save_input == "y":
-                save = True
-            save_fig_input = input("Save figure (y/n): ") #days
-            if save_fig_input == "y":
-                save_fig = True
-            save_mode_input = input("Store only last value (0,1): ") #days
-            if save_mode_input == "1":
-                save_mode = 1
+        print("please provide an input file")
+        exit()
             
-    
-        except:
-            print("please enter a number")
-            exit()    
-    
-        for z in range(number_of_stocks): 
-            try:
-                last_change = random.choice(["positive", "negative"])
-                min_price = abs(float(input("Enter a min stock price: ")))
-                if min_price == 0:
-                    min_price = 1
-                max_price = abs(float(input("Enter a max stock price: ")))
-                if max_price == 0:
-                    max_price = 1
-                current_price = abs(float(input("Enter a current stock price: ")))
-                if current_price == 0:
-                    current_price = 1
-                volatility = abs(float(input("Enter a stock volatility (0.1-0.9): "))) #determines width of min max range
-                if volatility == 0:
-                    volatility = 0.1
-                value_scaler = abs(float(input("Enter a stock value scaler: "))) #determines cheapness of stock
-                if value_scaler == 0:
-                    value_scaler = 1
-                stock_name = input("Enter a stock name: ") #determines cheapness of stock
-                
-                stock_dict = {
-                    "time": [],
-                    "current_price": []
-                }
-                
-                stockdict =	{
-                    "last_change": last_change,
-                    "min_price": min_price,
-                    "max_price": max_price,
-                    "current_price": current_price,
-                    "volatility": volatility,
-                    "value_scaler": value_scaler,
-                    "stock_dict": stock_dict,
-                    "stock_name": stock_name
-                }
-                
-                stock_list.append(stockdict)
-            
-            except:
-                print("please enter a number")
-                exit()   
-    
     average_change_global_sentiment = 1 / (100 * 24 * len(stock_list))
     return(stock_list)
 
@@ -263,95 +194,151 @@ def plot_stock_value(stock_list):
         plt.close() 
 
 def check_save(stock_dict):
-    global simulation_time
     time_list = stock_dict['stock_dict']['time']
     if not time_list:
         return 0
     else:
         start_time = int(round(len(time_list) / 60 / 24))
-        simulation_time = simulation_time + start_time
         return start_time
     
-def save_json(stock_list):
+def save_json():
+    global stock_list
+    
     f = open("output.txt", "w+")
     f.close()
     
     for stock_dict in stock_list:
-        json_object = json.dumps(stock_dict) 
+        save_dict = stock_dict.copy()
+        del save_dict['function']
+        del save_dict['price_target']
+        
+        json_object = json.dumps(save_dict) 
         
         f = open("output.txt", "a")
         f.write(json_object)
         f.write("\n")
         f.close()
 
-def run():
+def days():
+    global stock_list
+    global hour
+    
+    for stock_index, stock in enumerate(stock_list):  
+        min_price = stock.get('min_price')
+        max_price = stock.get('max_price')
+        current_price = stock.get('current_price')
+        volatility = stock.get('volatility')
+        value_scaler = stock.get('value_scaler')
+        last_change = stock.get('last_change')
+        stock_dict = stock.get("stock_dict")
+    
+        function = define_function(current_price, max_price, min_price)
+        stock['function'] = function
+        stock_list[stock_index] = stock
+        
+    hour = 0
+    
+    threading.Timer(86400.0, days).start()
+        
+def hours():
+    global stock_list
+    global hour
+    global minute
+    
+    for stock_index, stock in enumerate(stock_list):  
+        min_price = stock.get('min_price')
+        max_price = stock.get('max_price')
+        current_price = stock.get('current_price')
+        volatility = stock.get('volatility')
+        value_scaler = stock.get('value_scaler')
+        last_change = stock.get('last_change')
+        stock_dict = stock.get("stock_dict")   
+        function = stock.get("function")   
+        
+        price_target = get_price_target(function, hour, max_price, min_price,)
+        
+        new_min_max_prize = update_min_max(max_price, min_price, volatility)
+        max_price = new_min_max_prize[0]
+        min_price = new_min_max_prize[1]
+        
+        stock['price_target'] = price_target
+        stock['max_price'] = max_price
+        stock['min_price'] = min_price
+        stock_list[stock_index] = stock
+        
+    hour = hour + 1
+    minute = 0
+        
+    threading.Timer(3600.0, hours).start()
+  
+def minutes():
     global save
     global save_fig
-    global simulation_time
     global save_mode
+    global stock_list
+    global minute
     
-    stock_list = get_input()
-    
-    start_time = check_save(stock_list[0])
-    
-    for q in range(start_time, simulation_time):
-        print("time: " + str(q))
-        for stock_index, stock in enumerate(stock_list):  
-              
-            min_price = stock.get('min_price')
-            max_price = stock.get('max_price')
-            current_price = stock.get('current_price')
-            volatility = stock.get('volatility')
-            value_scaler = stock.get('value_scaler')
-            last_change = stock.get('last_change')
-            stock_dict = stock.get("stock_dict")
+    for stock_index, stock in enumerate(stock_list):  
+        min_price = stock.get('min_price')
+        max_price = stock.get('max_price')
+        current_price = stock.get('current_price')
+        volatility = stock.get('volatility')
+        value_scaler = stock.get('value_scaler')
+        last_change = stock.get('last_change')
+        stock_dict = stock.get("stock_dict")   
+        function = stock.get("function") 
+        price_target = stock.get("price_target") 
+        update_current_price_result = (update_current_price(current_price, max_price, min_price, price_target, last_change))
+        current_price = update_current_price_result[0]
         
-            function = define_function(current_price, max_price, min_price)
-            time = q * 60 * 24
+        scaled_current_price = scale_value(current_price, value_scaler)
+        last_change = update_current_price_result[1]
+        
+        time_list = stock_dict['time']
+        try:
+            time = time_list[-1]
+            time = time + 1
+        except:
+            time = 0
             
-            for i in range(24):
-                price_target = get_price_target(function, i, max_price, min_price,)
-                
-                for j in range(60):
-                    update_current_price_result = (update_current_price(current_price, max_price, min_price, price_target, last_change))
-                    current_price = update_current_price_result[0]
-                    
-                    scaled_current_price = scale_value(current_price, value_scaler)
-                    last_change = update_current_price_result[1]
-                    
-                    time_list = stock_dict['time']
-                    current_price_list = stock_dict['current_price']
-                    
-                    if save_mode == 1:
-                        time_list = []
-                        current_price_list = []
+        current_price_list = stock_dict['current_price']
+        
+        if save_mode == 1:
+            time_list = []
+            current_price_list = []
 
-                    time_list.append(time)
-                    current_price_list.append(scaled_current_price)
+        time_list.append(time)
+        current_price_list.append(scaled_current_price)
 
-                    stock_dict['time'] = time_list
-                    stock_dict['current_price'] = current_price_list
-                    
-                    time = time + 1
-                    
-                new_min_max_prize = update_min_max(max_price, min_price, volatility)
-                max_price = new_min_max_prize[0]
-                min_price = new_min_max_prize[1]
-                
-            stock['min_price'] = min_price
-            stock['max_price'] = max_price
-            stock['current_price'] = current_price
-            stock['last_change'] = last_change
-            stock['stock_dict'] = stock_dict
-            
-            stock_list[stock_index] = stock
-    
+        stock_dict['time'] = time_list
+        stock_dict['current_price'] = current_price_list
+        
+        stock['current_price'] = current_price
+        stock['last_change'] = last_change
+        stock['stock_dict'] = stock_dict
+        
+        stock_list[stock_index] = stock
+        
+        print(current_price)
+        
     if save_fig == True:
         plot_stock_value(stock_list)    
 
     if save == True:
-        save_json(stock_list)  
-         
-    print("Runtime: " + str(datetime.datetime.now() - begin_time))
+        save_json()  
+          
+    minute = minute + 1
+        
+    threading.Timer(60.0, minutes).start()
+  
+
+def run():
+    global stock_list
     
+    stock_list = get_input()
+    days()
+    hours()
+    minutes()
+
+                 
 run()
